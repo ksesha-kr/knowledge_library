@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'resource_list' %}">Материалы</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'topic_list' %}">Темы</a></li>
+                    <li class="breadcrumb-item active">Удаление</li>
+                </ol>
+            </nav>
+
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <strong>Внимание!</strong> Это действие нельзя отменить.
+                    </div>
+
+                    <div class="d-flex align-items-center mb-4">
+                        <span class="badge me-3"
+                              style="background-color: {{ topic.color|default:'#6c757d' }}; padding: 10px 15px;">
+                            {{ topic.name }}
+                        </span>
+                        <div>
+                            <h6 class="mb-0">Тема: {{ topic.name }}</h6>
+                            {% if topic.description %}
+                            <p class="text-muted small mb-0">{{ topic.description|truncatechars:100 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if topic.resources.exists %}
+                    <div class="alert alert-danger">
+                        <h6><i class="bi bi-x-circle"></i> Нельзя удалить!</h6>
+                        <p class="mb-0">
+                            Эта тема используется в <strong>{{ topic.resources.count }}</strong> материалах.
+                            Сначала удалите или измените связанные материалы.
+                        </p>
+                    </div>
+                    <div class="d-grid">
+                        <a href="{% url 'topic_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад к списку тем
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Информация:</h6>
+                        <ul class="mb-0 small">
+                            <li>Тема не используется в материалах</li>
+                            <li>Удаление можно будет отменить, восстановив из базы данных</li>
+                        </ul>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Да, удалить тему
+                            </button>
+                            <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Отмена
+                            </a>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-muted small">
+                    <i class="bi bi-clock"></i> Создана: {{ topic.created_at|date:"d.m.Y H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

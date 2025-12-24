@@ -1,0 +1,88 @@
+.resource-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.resource-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-color: #0d6efd;
+}
+
+.topic-badge {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    margin: 0.125rem;
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 1rem;
+}
+
+.card-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+@media (max-width: 768px) {
+    .display-1 {
+        font-size: 3rem;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+}
+
+.card {
+    margin-bottom: 10px !important;
+}
+
+.card-body {
+    padding: 12px 15px !important;
+}
+
+.card-footer {
+    padding: 8px 15px !important;
+}
+
+.form-control, .btn {
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+}
+
+.row {
+    margin-bottom: 5px !important;
+}
+
+.btn-sm {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 10px !important;
+}
+
+.form-label {
+    margin-bottom: 4px !important;
+    font-size: 14px !important;
+}

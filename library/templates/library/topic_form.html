@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ title }} - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'resource_list' %}">Материалы</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'topic_list' %}">Темы</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h1 class="h4 mb-0">
+                        <i class="bi bi-tag-fill" style="color: {{ form.color.value|default:'#6c757d' }}"></i>
+                        {{ title }}
+                    </h1>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {{ form|crispy }}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <div>
+                                <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Назад к списку
+                                </a>
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i>
+                                    {% if topic %}Сохранить изменения{% else %}Добавить тему{% endif %}
+                                </button>
+
+                                {% if topic %}
+                                <a href="{% url 'delete_topic' topic.pk %}"
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Удалить тему «{{ topic.name }}»?')">
+                                    <i class="bi bi-trash"></i> Удалить
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if form.color.value %}
+
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('id_name');
+    const colorInput = document.getElementById('id_color');
+    const descriptionInput = document.getElementById('id_description');
+    const previewBadge = document.querySelector('.badge');
+
+    function updatePreview() {
+        if (previewBadge && nameInput && colorInput) {
+            previewBadge.textContent = nameInput.value || 'Название темы';
+            previewBadge.style.backgroundColor = colorInput.value || '#6c757d';
+
+            if (previewBadge.parentElement.nextElementSibling) {
+                const descriptionText = descriptionInput.value;
+                const descriptionElement = previewBadge.parentElement.nextElementSibling.querySelector('p');
+                if (descriptionElement && descriptionText) {
+                    descriptionElement.textContent = descriptionText;
+                }
+            }
+        }
+    }
+
+    if (nameInput) nameInput.addEventListener('input', updatePreview);
+    if (colorInput) colorInput.addEventListener('input', updatePreview);
+    if (descriptionInput) descriptionInput.addEventListener('input', updatePreview);
+
+    updatePreview();
+});
+</script>
+{% endblock %}

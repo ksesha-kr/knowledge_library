@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование профиля - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Редактирование профиля</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="first_name"
+                                   name="first_name" value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Фамилия</label>
+                            <input type="text" class="form-control" id="last_name"
+                                   name="last_name" value="{{ user.last_name }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email"
+                               name="email" value="{{ user.email }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username"
+                               value="{{ user.username }}" disabled>
+                        <div class="form-text">Имя пользователя нельзя изменить</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Роль</label>
+                        <input type="text" class="form-control"
+                               value="{{ user.get_role_display }}" disabled>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'profile' %}" class="btn btn-secondary me-md-2">
+                            Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="alert alert-warning">
+                    <h5><i class="bi bi-shield-exclamation"></i> Безопасность</h5>
+                    <p>Для изменения пароля, пожалуйста, используйте <a href="#">форму смены пароля</a>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

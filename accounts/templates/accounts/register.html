@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Регистрация - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-person-plus"></i> Регистрация нового пользователя</h4>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post" id="registrationForm">
+                    {% csrf_token %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.username|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.email|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.password1|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.password2|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.role|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.registration_key|as_crispy_field }}
+                                <div class="mt-1">
+                                    <small id="keyStatus" class="form-text"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="bi bi-info-circle"></i> Информация о регистрации</h6>
+                        <ul class="mb-0">
+                            <li>Для регистрации необходим ключ, который можно получить у администратора</li>
+                            <li><strong>Студенты</strong> могут только просматривать и оценивать материалы</li>
+                            <li><strong>Преподаватели</strong> могут добавлять и редактировать материалы</li>
+                            <li><strong>Администраторы</strong> имеют полный доступ к системе</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="bi bi-person-plus"></i> Зарегистрироваться
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+
+                <p class="text-center">
+                    Уже есть аккаунт? <a href="{% url 'login' %}">Войдите в систему</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .key-valid {
+        color: #198754;
+    }
+    .key-invalid {
+        color: #dc3545;
+    }
+    .key-checking {
+        color: #6c757d;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keyInput = document.getElementById('id_registration_key');
+    const roleSelect = document.getElementById('id_role');
+    const keyStatus = document.getElementById('keyStatus');
+    const submitBtn = document.getElementById('submitBtn');
+    let checkTimeout = null;
+
+    function checkRegistrationKey() {
+        const key = keyInput.value.trim();
+        const role = roleSelect.value;
+
+        if (key.length < 5) {
+            keyStatus.textContent = '';
+            keyStatus.className = 'form-text';
+            return;
+        }
+
+        keyStatus.textContent = 'Проверка ключа...';
+        keyStatus.className = 'form-text key-checking';
+
+        fetch(`/accounts/api/check-registration-key/?key=${encodeURIComponent(key)}&role=${encodeURIComponent(role)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    keyStatus.textContent = `✓ Ключ действителен (${data.role_name})`;
+                    keyStatus.className = 'form-text key-valid';
+                    submitBtn.disabled = false;
+                } else {
+                    keyStatus.textContent = `✗ ${data.message}`;
+                    keyStatus.className = 'form-text key-invalid';
+                    submitBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                keyStatus.textContent = 'Ошибка проверки ключа';
+                keyStatus.className = 'form-text key-invalid';
+                console.error('Ошибка проверки ключа:', error);
+            });
+    }
+
+    keyInput.addEventListener('input', function() {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(checkRegistrationKey, 500);
+    });
+
+    roleSelect.addEventListener('change', checkRegistrationKey);
+
+    if (keyInput.value.trim().length >= 5) {
+        checkRegistrationKey();
+    }
+});
+</script>
+{% endblock %}

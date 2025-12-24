@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title|default:"Добавление материала" }} - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>
+                    {% if form.instance.pk %}
+                        <i class="bi bi-pencil"></i> Редактирование материала
+                    {% else %}
+                        <i class="bi bi-plus-circle"></i> Добавление нового материала
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            {{ form.title|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.resource_type|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ form.description|as_crispy_field }}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.url|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.file|as_crispy_field }}
+                            {% if form.instance.file %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Текущий файл:
+                                    <a href="{{ form.instance.file.url }}" target="_blank">
+                                        {{ form.instance.file.name|slice:"9:" }}
+                                    </a>
+                                </small>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="clear_file" id="clear_file">
+                                    <label class="form-check-label small" for="clear_file">
+                                        Удалить текущий файл
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if user.role == 'admin' %}
+                    <div class="mb-3">
+                        <label for="id_author" class="form-label">Автор</label>
+                        <select name="author" class="form-select" id="id_author">
+                            <option value="{{ user.id }}" {% if form.instance.author.id == user.id %}selected{% endif %}>
+                                {{ user.username }} (я)
+                            </option>
+                            {% for other_user in all_users %}
+                            {% if other_user.id != user.id %}
+                            <option value="{{ other_user.id }}" {% if form.instance.author.id == other_user.id %}selected{% endif %}>
+                                {{ other_user.username }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="author" value="{{ user.id }}">
+                    {% endif %}
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6>Темы / Категории</h6>
+                        </div>
+                        <div class="card-body">
+                            {{ form.topics|as_crispy_field }}
+                            <div class="text-end">
+                                <a href="{% url 'manage_topics' %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-plus-circle"></i> Добавить новую тему
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="bi bi-info-circle"></i> Информация:</h6>
+                        <ul class="mb-0">
+                            <li>Вы можете указать либо URL, либо загрузить файл</li>
+                            <li>Если указаны оба, будет использован URL</li>
+                            <li>Поддерживаемые типы файлов: PDF, изображения, документы</li>
+                            <li>Максимальный размер файла: 10MB</li>
+                            {% if form.instance.pk %}
+                            <li>Дата последнего обновления будет автоматически изменена</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        {% if form.instance.pk %}
+                        <a href="{% url 'resource_detail' form.instance.pk %}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        {% else %}
+                        <a href="{% url 'resource_list' %}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            {% if form.instance.pk %}
+                                <i class="bi bi-check-circle"></i> Сохранить изменения
+                            {% else %}
+                                <i class="bi bi-plus-circle"></i> Добавить материал
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,747 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Панель администратора - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2><i class="bi bi-speedometer2 me-2"></i>Панель администратора</h2>
+        <div class="row g-4 mt-3">
+            <div class="col-md-3">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h2><i class="bi bi-people-fill text-primary"></i></h2>
+                        <h3>{{ stats.total_users }}</h3>
+                        <p class="text-muted mb-0">Всего пользователей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h2><i class="bi bi-person-badge text-success"></i></h2>
+                        <h3>{{ stats.teachers }}</h3>
+                        <p class="text-muted mb-0">Преподавателей</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h2><i class="bi bi-person text-info"></i></h2>
+                        <h3>{{ stats.students }}</h3>
+                        <p class="text-muted mb-0">Студентов</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h2><i class="bi bi-shield-check text-danger"></i></h2>
+                        <h3>{{ stats.admins }}</h3>
+                        <p class="text-muted mb-0">Администраторов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-container" style="display: none;"></div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Управление пользователями</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя пользователя</th>
+                                <th>Email</th>
+                                <th>Имя</th>
+                                <th>Роль</th>
+                                <th>Дата регистрации</th>
+                                <th class="text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr data-user-id="{{ user.id }}">
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <strong>{{ user.username }}</strong>
+                                    {% if user.is_superuser %}
+                                    <i class="bi bi-star-fill text-warning ms-1" title="Суперпользователь"></i>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.get_full_name|default:"-" }}</td>
+                                <td>
+                                    {% if user.is_superuser %}
+                                    <span class="badge bg-danger">Администратор</span>
+                                    {% elif user.is_staff %}
+                                    <span class="badge bg-success">Редактор</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">Пользователь</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.date_joined|date:"d.m.Y H:i" }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary edit-user-btn"
+                                                data-user-id="{{ user.id }}"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editUser{{ user.id }}"
+                                                title="Редактировать">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        {% if not user.is_superuser or not user == request.user %}
+                                        <button class="btn btn-outline-danger delete-user-btn"
+                                                data-user-id="{{ user.id }}"
+                                                data-user-name="{{ user.username }}"
+                                                title="Удалить пользователя">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <div class="modal fade" id="editUser{{ user.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Редактирование пользователя {{ user.username }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="post" action="{% url 'update_user' user.id %}">
+                                            <div class="modal-body">
+                                                {% csrf_token %}
+                                                <div class="mb-3">
+                                                    <label class="form-label">Роль пользователя</label>
+                                                    <select class="form-select" name="role">
+                                                        <option value="user" {% if not user.is_staff and not user.is_superuser %}selected{% endif %}>
+                                                            Обычный пользователь
+                                                        </option>
+                                                        <option value="editor" {% if user.is_staff and not user.is_superuser %}selected{% endif %}>
+                                                            Редактор (может добавлять материалы)
+                                                        </option>
+                                                        <option value="admin" {% if user.is_superuser %}selected{% endif %}>
+                                                            Администратор (полный доступ)
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Активен</label>
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox"
+                                                               name="is_active" id="active{{ user.id }}"
+                                                               {% if user.is_active %}checked{% endif %}>
+                                                        <label class="form-check-label" for="active{{ user.id }}">
+                                                            Активный аккаунт
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-people display-6 d-block mb-2"></i>
+                                    Нет пользователей
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-key me-2"></i>Генерация ключей регистрации</h5>
+            </div>
+            <div class="card-body">
+                <form id="generateKeyForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="keyRole" class="form-label">Роль пользователя</label>
+                        <select class="form-select" id="keyRole" name="role" required>
+                            <option value="viewer">Пользователь (только просмотр)</option>
+                            <option value="editor">Редактор (может добавлять материалы)</option>
+                            <option value="admin">Администратор (полный доступ)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="keyExpiry" class="form-label">Срок действия</label>
+                        <select class="form-select" id="keyExpiry" name="expiry_days" required>
+                            <option value="1">1 день</option>
+                            <option value="7" selected>7 дней</option>
+                            <option value="30">30 дней</option>
+                            <option value="90">90 дней</option>
+                            <option value="365">1 год</option>
+                            <option value="0">Без ограничения</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="maxUses" class="form-label">Максимальное использование</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="maxUses" name="max_uses"
+                                   value="1" min="0" max="100">
+                            <span class="input-group-text">раз</span>
+                        </div>
+                        <div class="form-text">0 = без ограничений</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="keyNote" class="form-label">Примечание (необязательно)</label>
+                        <textarea class="form-control" id="keyNote" name="note" rows="2"
+                                  placeholder="Для кого этот ключ, комментарий..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Сгенерировать ключ
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="generatedKeyCard" class="card border-0 shadow-sm" style="display: none;">
+            <div class="card-header bg-success text-white border-0">
+                <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Ключ сгенерирован</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Ключ регистрации:</strong>
+                        <button class="btn btn-sm btn-outline-success" onclick="copyGeneratedKey()">
+                            <i class="bi bi-clipboard"></i> Копировать
+                        </button>
+                    </div>
+                    <code id="generatedKeyValue" class="d-block p-2 bg-dark text-white rounded mb-2"></code>
+                    <div class="small">
+                        <div><strong>Роль:</strong> <span id="keyRoleInfo"></span></div>
+                        <div><strong>Действителен до:</strong> <span id="keyExpiryInfo"></span></div>
+                        <div><strong>Использований:</strong> <span id="keyUsesInfo"></span></div>
+                        <div><strong>Создан:</strong> <span id="keyCreatedInfo"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Активные ключи</h5>
+                    <span class="badge bg-info" id="activeKeysCount">0</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="activeKeysList" class="table-responsive">
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <span class="ms-2">Загрузка ключей...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border-radius: 10px;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,.125);
+    padding: 1rem 1.25rem;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.35em 0.65em;
+}
+
+.btn-group .btn {
+    border-radius: 4px;
+    margin: 0 1px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 0.3s ease-in-out;
+}
+
+.key-item {
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    background-color: rgba(0,0,0,0.02);
+    border-left: 3px solid #0d6efd;
+}
+
+.key-item.expired {
+    border-left-color: #dc3545;
+    opacity: 0.7;
+}
+
+.key-item.used {
+    border-left-color: #6c757d;
+    opacity: 0.7;
+}
+
+.key-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.alert-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showMessage(message, type = 'success', duration = 3000) {
+    const container = document.getElementById('message-container');
+
+    container.innerHTML = '';
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-message`;
+    alertDiv.innerHTML = `
+        <strong>${type === 'success' ? '✓' : '✗'} ${message}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    container.appendChild(alertDiv);
+    container.style.display = 'block';
+
+    setTimeout(() => {
+        if (container.contains(alertDiv)) {
+            container.removeChild(alertDiv);
+            if (container.children.length === 0) {
+                container.style.display = 'none';
+            }
+        }
+    }, duration);
+}
+
+function formatDate(dateString) {
+    if (!dateString || dateString === 'null') return 'Без ограничения';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Без ограничения';
+        return date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return 'Без ограничения';
+    }
+}
+
+function getRoleName(role) {
+    const roles = {
+        'admin': 'Администратор',
+        'editor': 'Редактор',
+        'viewer': 'Пользователь'
+    };
+    return roles[role] || role;
+}
+
+function copyGeneratedKey() {
+    const keyElement = document.getElementById('generatedKeyValue');
+    if (keyElement) {
+        const key = keyElement.textContent.trim();
+        if (!key) {
+            showMessage('Нет ключа для копирования', 'warning');
+            return;
+        }
+        navigator.clipboard.writeText(key).then(() => {
+            showMessage('Ключ скопирован в буфер обмена', 'success', 2000);
+        }).catch(err => {
+            console.error('Ошибка копирования:', err);
+            const textArea = document.createElement('textarea');
+            textArea.value = key;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('Ключ скопирован', 'success', 2000);
+            } catch (err) {
+                showMessage('Не удалось скопировать ключ', 'danger');
+            }
+            document.body.removeChild(textArea);
+        });
+    }
+}
+
+function loadActiveKeys() {
+    const keysList = document.getElementById('activeKeysList');
+    if (!keysList) return;
+
+    fetch('/accounts/api/registration-keys/active/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.keys && data.keys.length > 0) {
+                let html = '';
+
+                data.keys.forEach(key => {
+                    const isExpired = key.expires_at && new Date(key.expires_at) < new Date();
+                    const isUsed = key.max_uses > 0 && key.uses >= key.max_uses;
+
+                    const statusClass = isUsed ? 'used' : isExpired ? 'expired' : '';
+                    const safeKeyId = String(key.id).replace(/'/g, "\\'");
+
+                    html += `
+                        <div class="key-item ${statusClass}" data-key-id="${key.id}">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <small class="text-muted">${getRoleName(key.role)}</small>
+                                    <div class="key-code" title="Полный ключ: ${key.key}">
+                                        ${key.key.substring(0, 12)}...
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger revoke-key-btn"
+                                        data-key-id="${key.id}"
+                                        title="Отозвать ключ">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                            <div class="small text-muted">
+                                <div>Использовано: ${key.uses}/${key.max_uses || '∞'}</div>
+                                <div>До: ${formatDate(key.expires_at)}</div>
+                                ${key.note ? `<div>Прим.: ${escapeHtml(key.note)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                keysList.innerHTML = html;
+                document.getElementById('activeKeysCount').textContent = data.keys.length;
+            } else {
+                keysList.innerHTML = `
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> Нет активных ключей регистрации
+                    </div>
+                `;
+                document.getElementById('activeKeysCount').textContent = '0';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки ключей:', error);
+            keysList.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Ошибка загрузки ключей: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function generateRegistrationKey(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('generateKeyForm');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const maxUses = parseInt(formData.get('max_uses'));
+
+    if (isNaN(maxUses) || maxUses < 0 || maxUses > 100) {
+        showMessage('Максимальное использование должно быть от 0 до 100', 'danger');
+        return;
+    }
+
+    const data = {
+        role: formData.get('role'),
+        expiry_days: parseInt(formData.get('expiry_days')),
+        max_uses: maxUses,
+        note: formData.get('note')
+    };
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Генерация...';
+    submitBtn.disabled = true;
+
+    fetch('/accounts/api/registration-keys/generate/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.key) {
+            const keyCard = document.getElementById('generatedKeyCard');
+            document.getElementById('generatedKeyValue').textContent = data.key.key;
+            document.getElementById('keyRoleInfo').textContent = getRoleName(data.key.role);
+            document.getElementById('keyExpiryInfo').textContent = formatDate(data.key.expires_at);
+            document.getElementById('keyUsesInfo').textContent = `${data.key.uses}/${data.key.max_uses || '∞'}`;
+            document.getElementById('keyCreatedInfo').textContent = formatDate(data.key.created_at);
+
+            keyCard.style.display = 'block';
+            keyCard.classList.add('fade-in');
+
+            keyCard.scrollIntoView({ behavior: 'smooth' });
+
+            loadActiveKeys();
+
+            form.reset();
+            document.getElementById('keyExpiry').value = '7';
+            document.getElementById('maxUses').value = '1';
+
+            showMessage('Ключ успешно сгенерирован', 'success');
+        } else {
+            throw new Error(data.error || 'Ошибка генерации ключа');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка генерации ключа:', error);
+        showMessage(error.message, 'danger');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function revokeKey(keyId) {
+    if (!confirm('Вы уверены, что хотите отозвать этот ключ? Все дальнейшие попытки регистрации с ним будут отклонены.')) {
+        return;
+    }
+
+    const keyItem = document.querySelector(`.key-item[data-key-id="${keyId}"]`);
+    if (keyItem) {
+        const button = keyItem.querySelector('.revoke-key-btn');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
+    }
+
+    fetch(`/accounts/api/registration-keys/${keyId}/revoke/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showMessage('Ключ успешно отозван', 'success');
+            if (keyItem) {
+                keyItem.style.opacity = '0.5';
+                setTimeout(() => {
+                    keyItem.remove();
+                    const countElement = document.getElementById('activeKeysCount');
+                    const currentCount = parseInt(countElement.textContent) || 0;
+                    countElement.textContent = Math.max(0, currentCount - 1);
+                }, 300);
+            } else {
+                loadActiveKeys();
+            }
+        } else {
+            throw new Error(data.error || 'Ошибка отзыва ключа');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка отзыва ключа:', error);
+        showMessage(error.message, 'danger');
+        if (keyItem) {
+            const button = keyItem.querySelector('.revoke-key-btn');
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-x-circle"></i>';
+            }
+        }
+    });
+}
+
+function deleteUser(userId, userName) {
+    if (!confirm(`Вы уверены, что хотите удалить пользователя "${userName}"? Это действие нельзя отменить.`)) {
+        return;
+    }
+
+    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+    if (!row) {
+        showMessage('Пользователь не найден', 'danger');
+        return;
+    }
+
+    const button = row.querySelector('.delete-user-btn');
+    if (!button) return;
+
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    button.disabled = true;
+
+    fetch(`/accounts/admin/delete-user/${userId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            row.style.opacity = '0.5';
+            row.style.transform = 'translateX(-20px)';
+
+            setTimeout(() => {
+                row.remove();
+                showMessage(`Пользователь "${userName}" удален`, 'success');
+
+                const totalUsersElement = document.querySelector('.card-body h3:first-child');
+                if (totalUsersElement) {
+                    const currentCount = parseInt(totalUsersElement.textContent) || 0;
+                    totalUsersElement.textContent = Math.max(0, currentCount - 1);
+                }
+            }, 300);
+        } else {
+            throw new Error(data.error || 'Ошибка удаления пользователя');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка удаления:', error);
+        showMessage(error.message, 'danger');
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+    });
+}
+
+function handleDocumentClick(e) {
+    if (e.target.closest('.delete-user-btn')) {
+        const btn = e.target.closest('.delete-user-btn');
+        const userId = btn.getAttribute('data-user-id');
+        const userName = btn.getAttribute('data-user-name');
+        deleteUser(userId, userName);
+    }
+
+    if (e.target.closest('.revoke-key-btn')) {
+        const btn = e.target.closest('.revoke-key-btn');
+        const keyId = btn.getAttribute('data-key-id');
+        revokeKey(keyId);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const generateForm = document.getElementById('generateKeyForm');
+    if (generateForm) {
+        generateForm.addEventListener('submit', generateRegistrationKey);
+    }
+
+    document.addEventListener('click', handleDocumentClick);
+
+    loadActiveKeys();
+
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    setInterval(loadActiveKeys, 30000);
+
+    const editButtons = document.querySelectorAll('.edit-user-btn');
+    editButtons.forEach(btn => {
+        new bootstrap.Tooltip(btn);
+    });
+});
+</script>
+{% endblock %}

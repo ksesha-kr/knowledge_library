@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ resource.title }} - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="card-title">{{ resource.title }}</h2>
+                        <p class="text-muted">
+                            Автор: {{ resource.author.get_full_name|default:resource.author.username }}
+                            | Добавлено: {{ resource.created_at|date:"d.m.Y H:i" }}
+                            {% if resource.updated_at != resource.created_at %}
+                            | Обновлено: {{ resource.updated_at|date:"d.m.Y H:i" }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="btn-group" role="group">
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'bookmark_toggle' resource.pk %}"
+                           class="btn btn-outline-danger bookmark-btn {% if is_bookmarked %}active{% endif %}">
+                            <i class="bi bi-bookmark{% if is_bookmarked %}-heart-fill{% else %}{% endif %}"></i>
+                        </a>
+
+                        {% if user.is_authenticated and resource.author == user or user.role == 'admin' %}
+                        <button type="button"
+                                class="btn btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteModal">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                        {% if can_edit %}
+                        <a href="{% url 'edit_resource' resource.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {% for topic in resource.topics.all %}
+                    <a href="{% url 'topic_detail' topic.pk %}" class="badge bg-info text-decoration-none">{{ topic.name }}</a>
+                    {% endfor %}
+                    <span class="badge bg-secondary">{{ resource.get_resource_type_display }}</span>
+                </div>
+
+                <div class="card-text mb-4">
+                    {{ resource.description|linebreaks }}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    {% if resource.url %}
+                    <a href="{{ resource.url }}" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-link-45deg"></i> Перейти к ресурсу
+                    </a>
+                    {% endif %}
+
+                    {% if resource.file %}
+                    <a href="{{ resource.file.url }}" class="btn btn-success" download>
+                        <i class="bi bi-download"></i> Скачать файл
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if user.is_authenticated and resource.author == user or user.role == 'admin' %}
+                <div class="alert alert-info mt-3">
+                    <h6><i class="bi bi-shield-check"></i> Права доступа</h6>
+                    <p class="mb-0 small">
+                        Вы можете редактировать этот материал, так как вы {% if user == resource.author %}его автор{% else %}администратор{% endif %}.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Оценки и отзывы ({{ resource.ratings.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if user.is_authenticated %}
+                <div class="mb-4">
+                    <h6>{% if user_rating %}Ваша текущая оценка{% else %}Добавить оценку{% endif %}</h6>
+
+                    {% if user_rating %}
+                    <div class="alert alert-info py-2 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-warning">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= user_rating.rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                    <span class="text-dark ms-2">({{ user_rating.rating }}/5)</span>
+                                </span>
+                                {% if user_rating.comment %}
+                                <p class="mb-0 mt-2 small">{{ user_rating.comment|truncatechars:100 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'resource_detail' resource.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="{% if user_rating %}update{% else %}create{% endif %}">
+
+                        <div class="mb-3">
+                            <label class="form-label">Оценка:</label>
+                            <div class="rating-input">
+                                {% for i in "12345"|make_list %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio"
+                                           name="rating" id="rating{{ forloop.counter }}"
+                                           value="{{ forloop.counter }}"
+                                           {% if user_rating and forloop.counter == user_rating.rating %}checked{% endif %}
+                                           {% if not user_rating and forloop.counter == 5 %}checked{% endif %}>
+                                    <label class="form-check-label fs-4" for="rating{{ forloop.counter }}">
+                                        ★
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Комментарий (необязательно):</label>
+                            <textarea name="comment" id="comment"
+                                      class="form-control" rows="3"
+                                      placeholder="Ваш отзыв о материале...">{% if user_rating %}{{ user_rating.comment }}{% endif %}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {% if user_rating %}<i class="bi bi-check-circle"></i> Обновить{% else %}<i class="bi bi-star"></i> Оценить{% endif %}
+                            </button>
+
+                            {% if user_rating %}
+                            <button type="button" class="btn btn-outline-danger"
+                                    onclick="if(confirm('Удалить ваш отзыв?')){ window.location.href='{% url 'delete_review' user_rating.pk %}' }">
+                                <i class="bi bi-trash"></i> Удалить отзыв
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+                <hr>
+                {% endif %}
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Все отзывы ({{ resource.ratings.count }})</h6>
+                    {% if resource.ratings.count > 0 %}
+                    <span class="badge bg-primary">
+                        Средняя оценка: {{ resource.average_rating|floatformat:1 }}/5
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if resource.ratings.all %}
+                    {% for rating in resource.ratings.all %}
+                    <div class="card border-light mb-2" id="review-{{ rating.pk }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <strong>{{ rating.user.username }}</strong>
+                                    {% if rating.user == resource.author %}
+                                    <span class="badge bg-info ms-1">Автор</span>
+                                    {% endif %}
+                                    <span class="text-warning ms-2">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= rating.rating %}★{% else %}☆{% endif %}
+                                        {% endfor %}
+                                        <span class="text-muted small ms-1">({{ rating.rating }}/5)</span>
+                                    </span>
+                                </div>
+                                <div class="text-muted small">
+                                    {{ rating.created_at|date:"d.m.Y H:i" }}
+                                    {% if rating.created_at != rating.updated_at %}
+                                        <br><small class="text-muted">изменено: {{ rating.updated_at|date:"d.m.Y H:i" }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if rating.comment %}
+                            <div class="mb-2">
+                                <p class="mb-0">{{ rating.comment }}</p>
+                            </div>
+                            {% else %}
+                            <div class="mb-2">
+                                <p class="text-muted fst-italic small mb-0"><i>Без комментария</i></p>
+                            </div>
+                            {% endif %}
+
+                            {% if user.is_authenticated and rating.user == user %}
+
+                            {% elif user.is_authenticated and user.is_staff %}
+                            <div class="d-flex gap-2 mt-3 pt-2 border-top">
+                                <a href="{% url 'delete_review' rating.pk %}"
+                                   class="btn btn-outline-danger btn-sm"
+                                   onclick="return confirm('Удалить этот отзыв как администратор?')">
+                                    <i class="bi bi-trash"></i> Удалить (админ)
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <div class="display-4 text-muted">
+                            <i class="bi bi-chat-left"></i>
+                        </div>
+                        <h6 class="mt-3">Пока нет отзывов</h6>
+                        <p class="text-muted small mb-0">
+                            {% if user.is_authenticated %}
+                                Будьте первым, кто оставит отзыв!
+                            {% else %}
+                                <a href="{% url 'login' %}?next={{ request.path }}" class="text-decoration-none">
+                                    Войдите
+                                </a>, чтобы оставить отзыв
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Информация о материале</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p><strong>Средняя оценка:</strong></p>
+                    <div class="display-6 text-warning">
+                        {{ resource.average_rating|floatformat:1 }}
+                        <span class="rating-stars">
+                            {% with avg_rating=resource.average_rating %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= avg_rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                        </span>
+                    </div>
+                    <p class="text-muted">на основе {{ resource.ratings.count }} оценок</p>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <p><strong>В избранном у:</strong> {{ resource.bookmarks.count }} пользователей</p>
+                    <p><strong>Просмотров:</strong> Несколько раз</p>
+                </div>
+
+                {% if resource.author == user %}
+                <hr>
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-person-circle"></i> Это ваш материал</h6>
+                    <p class="mb-0 small">Вы можете редактировать или удалить этот материал</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Похожие материалы</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% if resource.topics.first %}
+                        {% for similar in resource.topics.first.resource_set.all|slice:":5" %}
+                            {% if similar.pk != resource.pk %}
+                            <a href="{% url 'resource_detail' similar.pk %}"
+                               class="list-group-item list-group-item-action">
+                                <small>{{ similar.get_resource_type_display }}</small><br>
+                                <strong>{{ similar.title|truncatechars:40 }}</strong>
+                            </a>
+                            {% endif %}
+                        {% empty %}
+                        <p class="text-muted small">Нет похожих материалов</p>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-muted small">У материала нет тем для поиска похожих</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated and resource.author == user or user.role == 'admin' %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить материал <strong>"{{ resource.title }}"</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> Это действие нельзя отменить. Все данные о материале будут удалены безвозвратно.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'delete_resource' resource.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteResource(resourceId) {
+    if (confirm('Вы уверены, что хотите удалить этот материал?')) {
+        fetch(`/resources/${resourceId}/delete-ajax/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = "{% url 'profile' %}";
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+</script>
+{% endblock %}

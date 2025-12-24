@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Поиск материалов - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            {% if search_query %}
+                <i class="bi bi-search"></i> Поиск: "{{ search_query }}"
+            {% else %}
+                <i class="bi bi-journal-text"></i> Все материалы
+            {% endif %}
+        </h4>
+        <div>
+            <a href="{% url 'add_resource' %}" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> Добавить
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-2">
+        <div class="col-md-3">
+            <div class="card border-light shadow-sm">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0"><i class="bi bi-funnel"></i> Фильтры</h6>
+                </div>
+                <div class="card-body p-2">
+                    <form method="get" class="compact-form">
+                        {{ form|crispy }}
+
+                        <div class="d-grid gap-1 mt-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-search"></i> Найти
+                            </button>
+                            <a href="{% url 'resource_list' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Сбросить
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-light shadow-sm mt-2">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Статистика</h6>
+                </div>
+                <div class="card-body p-2">
+                    <p class="mb-2 small">Найдено материалов: <strong>{{ page_obj.paginator.count }}</strong></p>
+                    <p class="mb-0 small">Страница: <strong>{{ page_obj.number }}</strong> из {{ page_obj.paginator.num_pages }}</p>
+                </div>
+            </div>
+
+            <div class="card border-light shadow-sm mt-2">
+                <div class="card-body p-2">
+                    <h6 class="small mb-2"><i class="bi bi-lightbulb"></i> Подсказки:</h6>
+                    <ul class="mb-0 small" style="padding-left: 20px;">
+                        <li>Используйте ключевые слова для поиска</li>
+                        <li>Фильтруйте по типу материала</li>
+                        <li>Выбирайте конкретную тему</li>
+                        <li>Задайте период добавления материалов</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            {% if search_query and page_obj.paginator.count == 0 %}
+                <div class="text-center py-4">
+                    <div class="display-4 text-muted mb-3">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <h5>Ничего не найдено по запросу: "{{ search_query }}"</h5>
+                    <p class="text-muted small mb-3">
+                        Попробуйте изменить условия поиска или использовать другие ключевые слова.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{% url 'resource_list' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-list"></i> Показать все материалы
+                        </a>
+                        <a href="{% url 'add_resource' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Добавить новый
+                        </a>
+                    </div>
+                </div>
+            {% elif page_obj %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>
+                        {% if search_query %}
+                            Результаты поиска: "{{ search_query }}"
+                        {% else %}
+                            Все учебные материалы
+                        {% endif %}
+                    </h5>
+                    <span class="badge bg-info">{{ page_obj.paginator.count }} материалов</span>
+                </div>
+
+                <div class="row g-2">
+                    {% for resource in page_obj %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-light shadow-sm h-100">
+                            <div class="card-header bg-light py-1 px-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-secondary small py-1">
+                                        {{ resource.get_resource_type_display }}
+                                    </span>
+                                    <small class="text-muted">{{ resource.created_at|date:"d.m.Y" }}</small>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1">
+                                    <a href="{% url 'resource_detail' resource.pk %}"
+                                       class="text-decoration-none text-dark">
+                                        {{ resource.title|truncatechars:50 }}
+                                    </a>
+                                </h6>
+
+                                <p class="card-text small text-muted mb-2">
+                                    {{ resource.description|truncatechars:80|default:"Без описания" }}
+                                </p>
+
+                                <div class="mb-2">
+                                    {% for topic in resource.topics.all|slice:":3" %}
+                                    <span class="badge bg-info small py-1 me-1 mb-1">{{ topic.name }}</span>
+                                    {% endfor %}
+                                    {% if resource.topics.count > 3 %}
+                                    <span class="badge bg-light text-dark small py-1">+{{ resource.topics.count|add:"-3" }}</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-person"></i> {{ resource.author.username }}
+                                    </small>
+                                    <span class="rating-stars small">
+                                        {% with avg_rating=resource.average_rating %}
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= avg_rating %}
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            {% else %}
+                                                <i class="bi bi-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <small class="text-muted">({{ resource.ratings.count }})</small>
+                                        {% endwith %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="card-footer bg-transparent p-2">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'resource_detail' resource.pk %}"
+                                       class="btn btn-outline-primary btn-sm py-0 px-2">
+                                        <i class="bi bi-eye"></i> Подробнее
+                                    </a>
+
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if user.is_authenticated %}
+                                        <a href="{% url 'bookmark_toggle' resource.pk %}"
+                                           class="btn btn-outline-danger py-0 px-2">
+                                            <i class="bi bi-bookmark"></i>
+                                        </a>
+
+                                        {% if resource.author == user or user.is_staff %}
+                                        <a href="{% url 'edit_resource' resource.pk %}"
+                                           class="btn btn-outline-warning py-0 px-2">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+
+                                        <button type="button"
+                                                class="btn btn-outline-danger py-0 px-2"
+                                                onclick="confirmDelete({{ resource.pk }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Навигация по страницам" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               aria-label="First">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               aria-label="Previous">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               aria-label="Next">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               aria-label="Last">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-4">
+                    <div class="display-4 text-muted mb-3">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                    <h5>Нет учебных материалов</h5>
+                    <p class="text-muted small mb-3">
+                        Библиотека пока пуста. Добавьте первый материал!
+                    </p>
+                    <a href="{% url 'add_resource' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> Добавить первый материал
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.container-fluid {
+    max-width: 1400px;
+}
+
+.card {
+    margin-bottom: 0 !important;
+    border-radius: 6px;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.card-text {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    font-weight: 500;
+}
+
+.form-label {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.form-control-sm, .form-select-sm {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.btn-sm {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.pagination {
+    margin-top: 10px !important;
+}
+
+.page-link {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.compact-form .form-group {
+    margin-bottom: 8px;
+}
+
+.compact-form label {
+    font-size: 12px !important;
+    margin-bottom: 2px !important;
+}
+
+.compact-form input,
+.compact-form select,
+.compact-form textarea {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+}
+
+.row.g-2 > [class*='col-'] {
+    padding: 2px;
+}
+
+.resource-card {
+    transition: all 0.2s ease;
+}
+
+.resource-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(resourceId) {
+    if (confirm('Вы уверены, что хотите удалить этот материал?')) {
+        window.location.href = `/resources/${resourceId}/delete/`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+        searchInput.focus();
+    }
+
+    const formGroups = document.querySelectorAll('.compact-form .form-group');
+    formGroups.forEach(group => {
+        const label = group.querySelector('label');
+        if (label) {
+            label.classList.add('small', 'mb-1');
+        }
+
+        const inputs = group.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.classList.add('form-control-sm');
+        });
+    });
+});
+</script>
+{% endblock %}

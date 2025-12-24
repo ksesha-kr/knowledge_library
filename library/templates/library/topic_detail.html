@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ topic.name }} - Библиотека знаний{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="card-title">{{ topic.name }}</h1>
+                        {% if topic.description %}
+                        <p class="card-text">{{ topic.description }}</p>
+                        {% endif %}
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-calendar"></i> Создана: {{ topic.created_at|date:"d.m.Y H:i" }}
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary" style="font-size: 1.2rem;">
+                            {{ resources.count }} материалов
+                        </span>
+                        {% if user.is_authenticated and user.role != 'student' %}
+                        <div class="mt-2">
+                            <a href="{% url 'manage_topics' %}" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-pencil"></i> Редактировать
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        {% if resources %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>Материалы по теме "{{ topic.name }}"</h3>
+            {% if user.is_authenticated and user.role != 'student' %}
+            <a href="{% url 'add_resource' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Добавить материал
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for resource in resources %}
+            <div class="col">
+                <div class="card resource-card h-100">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-secondary">
+                                {{ resource.get_resource_type_display }}
+                            </span>
+                            <small class="text-muted">{{ resource.created_at|date:"d.m.Y" }}</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ resource.title|truncatechars:60 }}</h5>
+                        <p class="card-text text-muted small">
+                            {{ resource.description|truncatechars:100 }}
+                        </p>
+
+                        <div class="mb-3">
+                            {% for topic in resource.topics.all|slice:":3" %}
+                            {% if topic.pk != topic.pk %}
+                            <span class="badge bg-info me-1 mb-1">{{ topic.name }}</span>
+                            {% endif %}
+                            {% endfor %}
+                            {% if resource.topics.count > 3 %}
+                            <span class="badge bg-light text-dark">+{{ resource.topics.count|add:"-3" }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> {{ resource.author.username }}
+                            </small>
+                            <span class="rating-stars">
+                                {% with avg_rating=resource.average_rating %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= avg_rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                <small class="text-muted">({{ resource.ratings.count }})</small>
+                                {% endwith %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'resource_detail' resource.pk %}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Подробнее
+                            </a>
+                            {% if user.is_authenticated %}
+                            <a href="{% url 'bookmark_toggle' resource.pk %}"
+                               class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-bookmark"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% load resource_stats %}
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Статистика темы</h5>
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-primary">{{ resources.count }}</h3>
+                            <p class="text-muted mb-0">Всего</p>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-success">{{ resources|count_by_type:'video' }}</h3>
+                            <p class="text-muted mb-0">Видео</p>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-info">{{ resources|count_by_type:'pdf' }}</h3>
+                            <p class="text-muted mb-0">PDF</p>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-warning">{{ resources|count_by_type:'link' }}</h3>
+                            <p class="text-muted mb-0">Ссылки</p>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-danger">{{ resources|count_by_type:'note' }}</h3>
+                            <p class="text-muted mb-0">Заметки</p>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center p-3">
+                            <h3 class="text-secondary">{{ resources|count_authors }}</h3>
+                            <p class="text-muted mb-0">Авторов</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="display-1 text-muted">
+                <i class="bi bi-folder"></i>
+            </div>
+            <h3 class="mt-3">В этой теме пока нет материалов</h3>
+            <p class="text-muted">
+                Будьте первым, кто добавит материал в тему "{{ topic.name }}"
+            </p>
+            {% if user.is_authenticated and user.role != 'student' %}
+            <a href="{% url 'add_resource' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> Добавить материал
+            </a>
+            {% else %}
+            <div class="alert alert-info mt-3" style="max-width: 500px; margin: 0 auto;">
+                <i class="bi bi-info-circle"></i> Только преподаватели и администраторы могут добавлять материалы
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if resources %}
+    <div class="col-12 mt-5">
+        <div class="card">
+            <div class="card-header">
+                <h5>Другие темы</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for other_topic in all_topics|slice:":6" %}
+                    {% if other_topic.pk != topic.pk %}
+                    <div class="col-md-4 mb-3">
+                        <a href="{% url 'topic_detail' other_topic.pk %}"
+                           class="card text-decoration-none text-dark h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ other_topic.name }}</h6>
+                                <p class="card-text small text-muted">
+                                    {{ other_topic.description|truncatechars:60|default:"Описание отсутствует" }}
+                                </p>
+                                <span class="badge bg-primary">
+                                    {{ other_topic.resource_set.count }} материалов
+                                </span>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleBookmark(resourceId) {
+    fetch(`/resources/${resourceId}/bookmark/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const stats = {
+        video: document.querySelectorAll('.badge.bg-secondary:contains("Видео")').length,
+        pdf: document.querySelectorAll('.badge.bg-secondary:contains("PDF")').length,
+        link: document.querySelectorAll('.badge.bg-secondary:contains("Ссылка")').length,
+        note: document.querySelectorAll('.badge.bg-secondary:contains("Заметка")').length
+    };
+
+    const videoCountElement = document.querySelector('.text-success h3');
+    if (videoCountElement) {
+        videoCountElement.textContent = stats.video || 0;
+    }
+
+    const pdfCountElement = document.querySelector('.text-info h3');
+    if (pdfCountElement) {
+        pdfCountElement.textContent = stats.pdf || 0;
+    }
+});
+</script>
+{% endblock %}

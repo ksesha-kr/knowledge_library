@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Редактировать отзыв - {{ resource.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'resource_list' %}">Все материалы</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'resource_detail' resource.pk %}">{{ resource.title|truncatechars:30 }}</a></li>
+                    <li class="breadcrumb-item active">Редактировать отзыв</li>
+                </ol>
+            </nav>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h1 class="h4 mb-0">
+                        <i class="bi bi-pencil text-warning"></i>
+                        Редактировать отзыв
+                    </h1>
+                    <p class="text-muted small mb-0 mt-1">
+                        Материал: "{{ resource.title }}"
+                    </p>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label class="form-label">Оценка:</label>
+                            <div class="rating-input">
+                                {% for i in "12345" %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio"
+                                           name="rating" id="rating{{ forloop.counter }}"
+                                           value="{{ forloop.counter }}"
+                                           {% if forloop.counter == review.rating %}checked{% endif %}>
+                                    <label class="form-check-label fs-4" for="rating{{ forloop.counter }}">
+                                        ★
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="comment" class="form-label">Комментарий:</label>
+                            <textarea name="comment" id="comment"
+                                      class="form-control" rows="5"
+                                      placeholder="Ваш отзыв о материале...">{{ review.comment }}</textarea>
+                            <div class="form-text small">
+                                Максимум 1000 символов. Вы можете оставить отзыв без комментария.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'resource_detail' resource.pk %}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Отмена
+                                </a>
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Сохранить изменения
+                                </button>
+                                <a href="{% url 'delete_review' review.pk %}"
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Вы уверены, что хотите удалить этот отзыв?')">
+                                    <i class="bi bi-trash"></i> Удалить
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Текущий отзыв</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-warning">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}
+                                            ★
+                                        {% else %}
+                                            ☆
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="text-muted ms-2">({{ review.rating }}/5)</span>
+                                </span>
+                                <small class="text-muted">
+                                    {{ review.created_at|date:"d.m.Y H:i" }}
+                                </small>
+                            </div>
+                            {% if review.comment %}
+                            <p class="mb-0">{{ review.comment }}</p>
+                            {% else %}
+                            <p class="text-muted mb-0"><i>Без комментария</i></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-input .form-check-input {
+    display: none;
+}
+
+.rating-input .form-check-label {
+    cursor: pointer;
+    color: #ddd;
+    transition: color 0.2s;
+}
+
+.rating-input .form-check-input:checked ~ .form-check-label,
+.rating-input .form-check-input:hover ~ .form-check-label,
+.rating-input .form-check-label:hover {
+    color: #ffc107;
+}
+
+.rating-input .form-check-input:checked + .form-check-label {
+    color: #ffc107;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.rating-input .form-check-label');
+    const inputs = document.querySelectorAll('.rating-input .form-check-input');
+
+    stars.forEach((star, index) => {
+        star.addEventListener('mouseenter', function() {
+            for (let i = 0; i <= index; i++) {
+                stars[i].style.color = '#ffc107';
+            }
+        });
+
+        star.addEventListener('mouseleave', function() {
+            const checkedInput = document.querySelector('.rating-input .form-check-input:checked');
+            if (checkedInput) {
+                const checkedIndex = Array.from(inputs).indexOf(checkedInput);
+                stars.forEach((s, i) => {
+                    s.style.color = i <= checkedIndex ? '#ffc107' : '#ddd';
+                });
+            } else {
+                stars.forEach(s => s.style.color = '#ddd');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
